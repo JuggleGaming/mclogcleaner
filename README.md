@@ -3,7 +3,7 @@ A collection of plugins I created for [Pelican Panel](https://pelican.dev).
 
 ## Plugins
 
-| Plugin | Description | Version |
+| Plugin | Description | Latest Version |
 |--------|-------------|---------|
 | [McLogCleaner](./mclogcleaner) | Delete old Minecraftlogs with ease | 1.0.0 |
 
