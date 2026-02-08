@@ -1,7 +1,7 @@
-# Pelican Panel - Plugins
-A collection of plugins I created for [Pelican Panel](https://pelican.dev).
+# Pelican Panel - Plugin
+Plugin for [Pelican Panel](https://pelican.dev) I created.
 
-## Plugins
+## Plugin
 
 | Plugin | Description | Latest Version |
 |--------|-------------|---------|
