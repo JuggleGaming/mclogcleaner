@@ -22,21 +22,24 @@ class McLogCleanAction extends Action
     protected function setUp(): void{
         parent::setUp();
 
-        // Nur sichtbar, wenn der Server online ist
-
         $this->hidden(function () {
          /** @var Server $server */
              $server = Filament::getTenant();
 
             return
-                $server->retrieveStatus()->isOffline()
-                || ! CheckEgg::serverSupportsLogCleaner($server);
+                ! CheckEgg::serverSupportsLogCleaner($server);
         });
 
         $this->label('Delete logs');
         $this->icon('tabler-trash');
         $this->color('danger');
         $this->size(Size::ExtraLarge);
+
+        $this->requiresConfirmation()
+             ->modalHeading('Delete logs?')
+             ->modalDescription('Are you sure you want to permanently delete all .log.gz files? This action cannot be undone.')
+             ->modalSubmitActionLabel('Yes, delete logs');
+
 
         $this->action(function () {
             /** @var Server $server */
