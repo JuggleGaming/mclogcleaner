@@ -8,7 +8,7 @@ Plugin for [Pelican Panel](https://pelican.dev) I created.
 | [McLogCleaner](./mclogcleaner) | Delete old Minecraftlogs with ease | 1.0.0 |
 
 ## How to install
-1. download the current version as a zip-file
+1. Download the current version as a zip-file
 2. Open Pelican Panel Admin area - Plugins
 3. Import the plugin
 4. Enable the plugin
