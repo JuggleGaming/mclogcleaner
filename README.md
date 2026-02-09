@@ -4,8 +4,8 @@ Plugin for [Pelican Panel](https://pelican.dev) I created.
 ## Plugin
 
 | Plugin | Description | Latest Version |
-|--------|-------------|---------|
-| [McLogCleaner](./mclogcleaner) | Delete old Minecraftlogs with ease | 1.0.1 |
+|--------|-------------|---------------|
+| [McLogCleaner](./mclogcleaner) | Delete old Minecraftlogs with ease | 1.1.0         |
 
 ## How to install
 1. Download the current version as a zip-file

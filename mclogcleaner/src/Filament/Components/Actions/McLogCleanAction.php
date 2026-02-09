@@ -10,7 +10,9 @@ use Filament\Notifications\Notification;
 use Filament\Support\Enums\Size;
 use Illuminate\Support\Facades\Http;
 use JuggleGaming\McLogCleaner\Enums\CheckEgg;
-
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Carbon\Carbon;
 
 class McLogCleanAction extends Action
 {
@@ -19,15 +21,13 @@ class McLogCleanAction extends Action
         return 'clean_logs';
     }
 
-    protected function setUp(): void{
+    protected function setUp(): void
+    {
         parent::setUp();
 
         $this->hidden(function () {
-         /** @var Server $server */
-             $server = Filament::getTenant();
-
-            return
-                ! CheckEgg::serverSupportsLogCleaner($server);
+            $server = Filament::getTenant();
+            return !CheckEgg::serverSupportsLogCleaner($server);
         });
 
         $this->label('Delete logs');
@@ -36,34 +36,86 @@ class McLogCleanAction extends Action
         $this->size(Size::ExtraLarge);
 
         $this->requiresConfirmation()
-             ->modalHeading('Delete logs?')
-             ->modalDescription('Are you sure you want to permanently delete all .log.gz files? This action cannot be undone.')
-             ->modalSubmitActionLabel('Yes, delete logs');
+            ->modalHeading('Delete logs')
+            ->modalDescription('Choose which logs should be deleted.')
+            ->modalSubmitActionLabel('Delete logs')
+            ->form([
+                Select::make('mode')
+                    ->label('Delete logs')
+                    ->options([
+                        7        => 'Older than 7 days',
+                        30       => 'Older than 30 days',
+                        -1       => 'Delete all logs',
+                        'custom' => 'Custom (days)',
+                    ])
+                    ->default(7)
+                    ->required()
+                    ->reactive(),
 
+                TextInput::make('custom_days')
+                    ->label('Delete logs older than (days)')
+                    ->numeric()
+                    ->minValue(1)
+                    ->maxValue(365)
+                    ->placeholder('e.g. 14')
+                    ->required(fn ($get) => $get('mode') === 'custom')
+                    ->visible(fn ($get) => $get('mode') === 'custom'),
+            ]);
 
-        $this->action(function () {
-            /** @var Server $server */
+        $this->action(function (array $data) {
             $server = Filament::getTenant();
 
+            $mode = $data['mode'];
+            if ($mode !== 'custom') {
+                $mode = (int) $mode;
+            }
+
+            if ($mode === 'custom') {
+                $days = max(1, (int) $data['custom_days']);
+            } elseif ($mode === -1) {
+                $days = 0;
+            } else {
+                $days = $mode;
+            }
+
             try {
-                $logs = Http::daemon($server->node)
+                $files = Http::daemon($server->node)
                     ->get("/api/servers/{$server->uuid}/files/list-directory", [
-                        'directory' => 'logs'
+                        'directory' => 'logs',
                     ])
                     ->throw()
                     ->json();
 
-                if (!is_array($logs) || count($logs) === 0) {
-                    throw new Exception('No logs found.');
+                if (!is_array($files)) {
+                    throw new Exception('Invalid log directory response.');
                 }
 
-                $fileNames = array_map(fn($file) => $file['name'], $logs);
-                $logsToDelete = array_filter($fileNames, fn($name) => str_ends_with($name, '.log.gz'));
+                $threshold = now()->subDays($days)->startOfDay();
 
-                if (count($logsToDelete) === 0) {
+                $logsToDelete = collect($files)
+                    ->filter(fn ($file) => str_ends_with($file['name'], '.log.gz'))
+                    ->filter(function ($file) use ($days, $threshold) {
+                        if ($days === 0) {
+                            return true;
+                        }
+
+                        $logDate = $this->extractLogDate($file['name']);
+
+                        if (!$logDate) {
+                            return false;
+                        }
+
+                        return $logDate->lessThan($threshold);
+                    })
+                    ->pluck('name')
+                    ->map(fn ($name) => 'logs/' . $name)
+                    ->values()
+                    ->all();
+
+                if (empty($logsToDelete)) {
                     Notification::make()
                         ->title('McLogCleaner')
-                        ->body('No logs (.log.gz-files) found.')
+                        ->body('No logs matching your selection were found.')
                         ->success()
                         ->send();
                     return;
@@ -71,8 +123,8 @@ class McLogCleanAction extends Action
 
                 Http::daemon($server->node)
                     ->post("/api/servers/{$server->uuid}/files/delete", [
-                        'root' => '/',
-                        'files' => array_map(fn($name) => 'logs/' . $name, $logsToDelete),
+                        'root'  => '/',
+                        'files' => $logsToDelete,
                     ])
                     ->throw();
 
@@ -82,15 +134,23 @@ class McLogCleanAction extends Action
                     ->success()
                     ->send();
 
-            } catch (Exception $exception) {
-                report($exception);
+            } catch (\Throwable $e) {
+                report($e);
 
                 Notification::make()
                     ->title('Cleanup failed.')
-                    ->body($exception->getMessage())
+                    ->body($e->getMessage())
                     ->danger()
                     ->send();
             }
         });
+    }
+
+    private function extractLogDate(string $filename): ?Carbon
+    {
+        if (preg_match('/(\d{4}-\d{2}-\d{2})/', $filename, $matches)) {
+            return Carbon::createFromFormat('Y-m-d', $matches[1])->startOfDay();
+        }
+        return null;
     }
 }
