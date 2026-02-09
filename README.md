@@ -1,20 +1,15 @@
-# Pelican Panel - Plugin
-Plugin for [Pelican Panel](https://pelican.dev) I created.
-
-## Plugin
-
-| Plugin | Description | Latest Version |
-|--------|-------------|---------------|
-| [McLogCleaner](./mclogcleaner) | Delete old Minecraftlogs with ease | 1.1.0         |
-
-## How to install
-1. Download the current version as a zip-file
-2. Open Pelican Panel Admin area - Plugins
-3. Import the plugin
-4. Enable the plugin
-
 ## McLogCleaner
 
-This plugin will delete all .log.gz files inside the logs folder.
+McLogCleaner automatically deletes all `.log.gz` files from the server’s `logs` folder.
 
-To use this plugin just add "mclogcleaner" as a feature to the egg you want to use this plugin with.
+> **Note:** `latest.log` will always remain intact and is never deleted.
+
+### Usage
+To use this plugin, add `mclogcleaner` as a feature to the egg you want to run it with.
+
+### Log Deletion Options
+When you click **Delete logs**, a dropdown menu appears where you can choose the **minimum age (in days)** of log files to delete:
+- Logs older than 7 days
+- Logs older than 30 days
+- All logs (regardless of age)
+- A custom age in days

@@ -4,7 +4,8 @@ namespace JuggleGaming\McLogCleaner\Enums;
 
 use App\Models\Server;
 
-enum CheckEgg: string {
+enum EggFeature: string
+{
     case Check = 'mclogcleaner';
 
     public static function fromServer(Server $server): ?self
