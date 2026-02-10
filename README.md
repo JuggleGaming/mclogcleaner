@@ -5,7 +5,7 @@ McLogCleaner automatically deletes all `.log.gz` files from the server’s `logs
 > **Note:** `latest.log` will always remain intact and is never deleted.
 
 ### Download
-You can download the latest version of McLogCleanerby clicking [here](https://github.com/JuggleGaming/mclogcleaner/releases/latest/download/mclogcleaner.zip).
+You can download the latest version of McLogCleaner by clicking [here](https://github.com/JuggleGaming/mclogcleaner/releases/latest/download/mclogcleaner.zip).
 
 ### Usage
 To use this plugin, add `mclogcleaner` as a feature to the egg you want to run it with.
