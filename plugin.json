@@ -6,7 +6,7 @@
     "description": "Clean your Minecraft-logs with ease",
     "category": "plugin",
     "url": "https://github.com/pelican-dev/plugins/tree/main/mclogcleaner",
-    "update_url": https://github.com/JuggleGaming/mclogcleaner/blob/updater/updater.json,
+    "update_url": "https://github.com/JuggleGaming/mclogcleaner/blob/updater/updater.json",
     "namespace": "JuggleGaming\\McLogCleaner",
     "class": "McLogCleanerPlugin",
     "panels": null,
