@@ -26,13 +26,13 @@ class McLogCleanAction extends Action
         $this->hidden(function () {
             /** @var Server|null $server */
             $server = Filament::getTenant();
-            if (!$server) {
+            if (! $server) {
                 return true;
             }
             $server->loadMissing('egg');
             $features = $server->egg->features ?? [];
 
-            return !in_array('mclogcleaner', $features, true);
+            return ! in_array('mclogcleaner', $features, true);
         });
 
         $this->label('Delete logs');
@@ -86,7 +86,7 @@ class McLogCleanAction extends Action
                     ])
                     ->throw()
                     ->json();
-                if (!is_array($files)) {
+                if (! is_array($files)) {
                     throw new Exception('Invalid log directory response.');
                 }
                 $threshold = now()->subDays($days)->startOfDay();
@@ -97,14 +97,14 @@ class McLogCleanAction extends Action
                             return true;
                         }
                         $logDate = $this->extractLogDate($file['name']);
-                        if (!$logDate) {
+                        if (! $logDate) {
                             return false;
                         }
 
                         return $logDate->lessThan($threshold);
                     })
                     ->pluck('name')
-                    ->map(fn ($name) => 'logs/' . $name)
+                    ->map(fn ($name) => 'logs/'.$name)
                     ->values()
                     ->all();
                 if (empty($logsToDelete)) {
@@ -124,7 +124,7 @@ class McLogCleanAction extends Action
                     ->throw();
                 Notification::make()
                     ->title('Logfolder cleaned')
-                    ->body(count($logsToDelete) . ' files were deleted.')
+                    ->body(count($logsToDelete).' files were deleted.')
                     ->success()
                     ->send();
             } catch (\Throwable $e) {
