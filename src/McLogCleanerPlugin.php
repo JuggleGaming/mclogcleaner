@@ -2,12 +2,17 @@
 
 namespace JuggleGaming\McLogCleaner;
 
+use App\Contracts\Plugins\HasPluginSettings;
+use App\Traits\EnvironmentWriterTrait;
 use Filament\Contracts\Plugin;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Panel;
 
-class McLogCleanerPlugin implements Plugin
+class McLogCleanerPlugin implements HasPluginSettings, Plugin
 {
+    use EnvironmentWriterTrait;
+
     public function getId(): string
     {
         return 'mclogcleaner';
@@ -26,22 +31,21 @@ class McLogCleanerPlugin implements Plugin
     public function getSettingsForm(): array
     {
         return [
-            TextInput::make('mclogcleaner_text_enabled')
-                ->label(trans('mclogcleaner::strings.settings.mclogcleaner_text_enabled'))
-                ->required()
-                ->default(fn () => config('mclogcleaner.mclogcleaner_text_enabled', 'true')),
+            Toggle::make('mclogcleaner_text_enabled')
+                ->label('Enable button text')
+                ->default(fn () => (bool) config('mclogcleaner.mclogcleaner_text_enabled', true)),
         ];
     }
 
     public function saveSettings(array $data): void
     {
         $this->writeToEnvironment([
-            'MCLOGCLEANER_TEXT_ENABLED' => $data['mclogcleaner_text_enabled'],
+            'MCLOGCLEANER_TEXT_ENABLED' => $data['mclogcleaner_text_enabled'] ? 'true' : 'false',
         ]);
 
         Notification::make()
             ->title('McLogCleaner')
-            ->body('Settings saved!')
+            ->body('Settings successfully saved!')
             ->success()
             ->send();
     }
