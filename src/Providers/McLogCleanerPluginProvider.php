@@ -12,6 +12,7 @@ class McLogCleanerPluginProvider extends ServiceProvider
     public function register(): void
     {
         Console::registerCustomHeaderActions(HeaderActionPosition::Before, McLogCleanAction::make());
+        EditFiles::registerCustomHeaderActions(HeaderActionPosition::Before, McLogCleanAction::make());
     }
 
     public function boot(): void
