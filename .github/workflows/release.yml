@@ -1,0 +1,52 @@
+name: Create Release and Package Artifact
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Read CHANGELOG.md for Release Notes
+        id: read_changelog
+        run: |
+          if [ -f "CHANGELOG.md" ]; then
+            echo "body<<EOF" >> $GITHUB_OUTPUT
+            cat CHANGELOG.md >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "body=Automatisch generiertes Release ohne CHANGELOG.md" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Prepare Folder and Filter Files
+        run: |
+          mkdir mclogcleaner  
+          shopt -s extglob
+          mv !(mclogcleaner|CHANGELOG.md) mclogcleaner/
+
+      - name: Zip the Folder
+        run: |
+          zip -r mclogcleaner.zip mclogcleaner/
+
+      - name: Generate Release Tag Name
+        id: release_tag
+        run: |
+          echo "tag=release-$(date +'%Y%m%d')-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release and Upload Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_tag.outputs.tag }}
+          name: "Release ${{ steps.release_tag.outputs.tag }}"
+          body: ${{ steps.read_changelog.outputs.body }} # Hier wird der Changelog-Inhalt eingefügt
+          files: mclogcleaner.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
