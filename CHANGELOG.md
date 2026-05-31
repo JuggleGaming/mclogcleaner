@@ -1,0 +1,1 @@
+Added the mclogcleaner button to the logs folder.
