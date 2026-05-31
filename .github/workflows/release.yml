@@ -15,6 +15,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Read Version from plugin.json
+        id: get_version
+        run: |
+          VERSION=$(jq -r '.version' plugin.json)
+          echo "version=v$VERSION" >> $GITHUB_OUTPUT
+
       - name: Read CHANGELOG.md for Release Notes
         id: read_changelog
         run: |
@@ -23,12 +29,12 @@ jobs:
             cat CHANGELOG.md >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
           else
-            echo "body=Automatisch generiertes Release ohne CHANGELOG.md" >> $GITHUB_OUTPUT
+            echo "body=Automatisch generiertes Release für Version ${{ steps.get_version.outputs.version }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Prepare Folder and Filter Files
         run: |
-          mkdir mclogcleaner  
+          mkdir mclogcleaner
           shopt -s extglob
           mv !(mclogcleaner|CHANGELOG.md) mclogcleaner/
 
@@ -36,17 +42,12 @@ jobs:
         run: |
           zip -r mclogcleaner.zip mclogcleaner/
 
-      - name: Generate Release Tag Name
-        id: release_tag
-        run: |
-          echo "tag=release-$(date +'%Y%m%d')-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
-
       - name: Create GitHub Release and Upload Asset
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.release_tag.outputs.tag }}
-          name: "Release ${{ steps.release_tag.outputs.tag }}"
-          body: ${{ steps.read_changelog.outputs.body }} # Hier wird der Changelog-Inhalt eingefügt
+          tag_name: ${{ steps.get_version.outputs.version }}
+          name: "Release ${{ steps.get_version.outputs.version }}"
+          body: ${{ steps.read_changelog.outputs.body }}
           files: mclogcleaner.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
