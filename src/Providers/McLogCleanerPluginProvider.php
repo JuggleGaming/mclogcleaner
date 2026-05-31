@@ -16,12 +16,10 @@ class McLogCleanerPluginProvider extends ServiceProvider
     {
         Console::registerCustomHeaderActions(HeaderActionPosition::Before, McLogCleanAction::make());
         EditFiles::registerCustomHeaderActions(HeaderActionPosition::Before, McLogCleanAction::make());
-        //ListFiles::registerCustomHeaderActions(HeaderActionPosition::Before, McLogCleanAction::make());
         ListFiles::registerCustomHeaderActions(
             HeaderActionPosition::Before,
             McLogCleanAction::make()
                 ->visible(function ($livewire) {
-                    // Prüfen, ob die Livewire-Komponente eine Eigenschaft 'path' besitzt
                     if (isset($livewire->path)) {
                         return $livewire->path === 'logs' || Str::startsWith($livewire->path, 'logs/');
                     }
