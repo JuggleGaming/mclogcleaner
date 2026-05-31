@@ -23,7 +23,6 @@ class McLogCleanerPluginProvider extends ServiceProvider
                     if (isset($livewire->path)) {
                         return $livewire->path === 'logs' || Str::startsWith($livewire->path, 'logs/');
                     }
-
                     return false;
                 })
         );
