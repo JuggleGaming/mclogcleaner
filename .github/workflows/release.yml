@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write # Erlaubt es dem Workflow, sich selbst abzubrechen
 
     steps:
       - name: Checkout Repository
@@ -21,6 +22,21 @@ jobs:
           VERSION=$(jq -r '.version' plugin.json)
           echo "version=v$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Check if release already exists
+        id: check_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION_TAG="${{ steps.get_version.outputs.version }}"
+          if gh release view "$VERSION_TAG" > /dev/null 2>&1; then
+            echo "::error::Release $VERSION_TAG already exists! Workflow cancelled. Please adjust the version."
+            gh run cancel ${{ github.run_id }}
+            sleep 10
+            exit 1
+          else
+            echo "Release $VERSION_TAG does not exist. Continuing..."
+          fi
+
       - name: Read CHANGELOG.md for Release Notes
         id: read_changelog
         run: |
@@ -30,7 +46,7 @@ jobs:
             echo "" >> $GITHUB_OUTPUT
             echo "{delimiter}" >> $GITHUB_OUTPUT
           else
-            echo "body=Automatisch generiertes Release für Version ${{ steps.get_version.outputs.version }}" >> $GITHUB_OUTPUT
+            echo "body=Automatically generated release notes for version ${{ steps.get_version.outputs.version }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Prepare Folder and Filter Files
