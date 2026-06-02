@@ -1,7 +1,5 @@
 <img src=".github/pictures/banner.png">
 
-# McLogCleaner (by JuggleGaming)
-
 McLogCleaner automatically deletes all `.log.gz` files from the server’s `logs` folder.
 
 > **Note:** `latest.log` will always remain intact and is never deleted.
