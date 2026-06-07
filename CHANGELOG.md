@@ -1,1 +1,2 @@
-Added the mclogcleaner button to the logs folder.
+Added the ability to translate the strings.
+Added german translation.
