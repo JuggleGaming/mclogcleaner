@@ -38,6 +38,7 @@ class McLogCleanAction extends Action
         $this->label(function () {
             return config('mclogcleaner.mclogcleaner_text_enabled') ? trans('mclogcleaner::cleaner.button.delete_logs_label') : '';
         });
+
         $this->icon('tabler-trash');
         $this->color('danger');
         $this->size(Size::ExtraLarge);
