@@ -36,13 +36,13 @@ class McLogCleanAction extends Action
         });
 
         $this->label(function () {
-            return config('mclogcleaner.mclogcleaner_text_enabled') ? trans('button.delete_logs_label') : '';
+            return config('mclogcleaner.mclogcleaner_text_enabled') ? trans('mclogcleaner::cleaner.button.delete_logs_label') : '';
         });
         $this->icon('tabler-trash');
         $this->color('danger');
         $this->size(Size::ExtraLarge);
         $this->requiresConfirmation()
-            ->modalHeading('Delete logs')
+            ->modalHeading('McLogCleaner')
             ->modalDescription('Choose which logs should be deleted.')
             ->modalSubmitActionLabel('Delete logs')
             ->form([
@@ -112,7 +112,7 @@ class McLogCleanAction extends Action
                 if (empty($logsToDelete)) {
                     Notification::make()
                         ->title('McLogCleaner')
-                        ->body('No logs matching your selection were found.')
+                        ->body(trans('mclogcleaner::cleaner.button.no_logs_found'),)
                         ->success()
                         ->send();
 
@@ -132,8 +132,8 @@ class McLogCleanAction extends Action
             } catch (\Throwable $e) {
                 report($e);
                 Notification::make()
-                    ->title('Cleanup failed.')
-                    ->body('An error occurred while deleting log files. Please try again later.')
+                    ->title(trans('mclogcleaner::cleaner.button.error_occured_label'),)
+                    ->body(trans('mclogcleaner::cleaner.button.error_occured_description'))
                     ->danger()
                     ->send();
             }
