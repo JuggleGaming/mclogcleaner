@@ -1,2 +1,2 @@
-Added the ability to translate the strings.
+Made the plugin translatable.
 Added german translation.
