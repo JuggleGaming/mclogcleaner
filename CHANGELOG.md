@@ -1,1 +1,2 @@
-Added the mclogcleaner button to the logs folder.
+Made the plugin translatable.
+Added german translation.
