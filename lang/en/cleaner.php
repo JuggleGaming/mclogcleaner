@@ -3,10 +3,10 @@
 return [
     'button' => [
         'delete_logs_label' => 'Delete logs',
-        'delete_logs_descrition' => 'Choose which logs should be deleted.',
+        'delete_logs_description' => 'Choose which logs should be deleted.',
         'delete_older_than_7' => 'Older than 7 days',
         'delete_older_than_30' => 'Older than 30 days',
-        'delete_all' => 'Older than 30 days',
+        'delete_all' => 'all',
         'delete_custom' => 'Custom (days)',
         'delete_custom_label' => 'Delete all logs older than (days)',
         'no_logs_found' => 'No logs matching your selection were found.',
@@ -17,8 +17,8 @@ return [
     ],
 
     'settings' => [
-        'settings_saved' => 'Settings successfully saved!',
-        'settings_text' => 'Enable button text',
+        'saved' => 'Settings successfully saved!',
+        'label' => 'Enable button text',
     ],
 
 ];
