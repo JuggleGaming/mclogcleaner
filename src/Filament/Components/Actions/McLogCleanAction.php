@@ -44,26 +44,26 @@ class McLogCleanAction extends Action
         $this->size(Size::ExtraLarge);
         $this->requiresConfirmation()
             ->modalHeading('McLogCleaner')
-            ->modalDescription('Choose which logs should be deleted.')
-            ->modalSubmitActionLabel('Delete logs')
+            ->modalDescription(fn () =>trans('mclogcleaner::cleaner.button.delete_logs_description'))
+            ->modalSubmitActionLabel(fn () =>trans('mclogcleaner::cleaner.button.delete_logs_label'))
             ->form([
                 Select::make('mode')
-                    ->label('Delete logs')
-                    ->options([
-                        7 => 'Older than 7 days',
-                        30 => 'Older than 30 days',
-                        -1 => 'Delete all logs',
-                        'custom' => 'Custom (days)',
+                    ->label(fn () =>trans('mclogcleaner::cleaner.button.delete_logs_label'))
+                    ->options(fn () => [
+                        7 => __('mclogcleaner::cleaner.button.delete_older_than_7'),
+                        30 => __('mclogcleaner::cleaner.button.delete_older_than_30'),
+                        -1 => __('mclogcleaner::cleaner.button.delete_all'),
+                        'custom' => __('mclogcleaner::cleaner.button.delete_custom'),
                     ])
                     ->default(7)
                     ->required()
                     ->reactive(),
                 TextInput::make('custom_days')
-                    ->label('Delete logs older than (days)')
+                    ->label(fn () =>trans('mclogcleaner::cleaner.button.delete_custom_label'))
                     ->numeric()
                     ->minValue(1)
                     ->maxValue(365)
-                    ->placeholder('e.g. 14')
+                    ->placeholder('14')
                     ->required(fn ($get) => $get('mode') === 'custom')
                     ->visible(fn ($get) => $get('mode') === 'custom'),
             ]);
@@ -126,8 +126,8 @@ class McLogCleanAction extends Action
                     ])
                     ->throw();
                 Notification::make()
-                    ->title('Logfolder cleaned')
-                    ->body(count($logsToDelete).' files were deleted.')
+                    ->title(trans('mclogcleaner::cleaner.button.cleanup_successful'))
+                    ->body(count($logsToDelete).' '.trans('mclogcleaner::cleaner.button.files_deleted'))
                     ->success()
                     ->send();
             } catch (\Throwable $e) {

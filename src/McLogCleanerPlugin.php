@@ -32,7 +32,7 @@ class McLogCleanerPlugin implements HasPluginSettings, Plugin
     {
         return [
             Toggle::make('mclogcleaner_text_enabled')
-                ->label('Enable button text')
+                ->label(trans('mclogcleaner::cleaner.settings.label'))
                 ->default(fn () => (bool) config('mclogcleaner.mclogcleaner_text_enabled', true)),
         ];
     }
@@ -45,7 +45,7 @@ class McLogCleanerPlugin implements HasPluginSettings, Plugin
 
         Notification::make()
             ->title('McLogCleaner')
-            ->body('Settings successfully saved!')
+            ->body(trans('mclogcleaner::cleaner.settings.saved'))
             ->success()
             ->send();
     }
