@@ -18,10 +18,15 @@ class McLogCleanerPluginProvider extends ServiceProvider
             HeaderActionPosition::Before,
             McLogCleanAction::make()
                 ->visible(function ($livewire) {
-                    if (isset($livewire->path)) {
-                        return $livewire->path === 'logs' || Str::startsWith($livewire->path, 'logs/');
+                    if (! isset($livewire->path)) {
+                        return false;
                     }
-                    return false;
+                    return collect([
+                        'logs',
+                        'crash-reports',
+                    ])->contains(
+                        fn ($dir) => $livewire->path === $dir || Str::startsWith($livewire->path, "{$dir}/")
+                    );
                 })
         );
 
