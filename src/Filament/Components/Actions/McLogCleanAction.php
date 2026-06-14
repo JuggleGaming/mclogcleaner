@@ -10,6 +10,7 @@ use Filament\Facades\Filament;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Support\Enums\Size;
 use Illuminate\Support\Facades\Http;
@@ -78,6 +79,11 @@ class McLogCleanAction extends Action
                     ->placeholder('14')
                     ->required(fn ($get) => $get('mode') === 'custom')
                     ->visible(fn ($get) => $get('mode') === 'custom'),
+
+                Toggle::make('dry_run')
+                    ->label(fn () => trans('mclogcleaner::cleaner.button.dryrun_toggle'))
+                    ->helperText(fn () => trans('mclogcleaner::cleaner.button.dryrun_info'))
+                    ->default(false),
             ]);
 
         $this->action(function (array $data) {
@@ -86,7 +92,8 @@ class McLogCleanAction extends Action
             if (! $server) return;
 
             $mode = $data['mode'];
-            $targets = $data['targets']; // Array aus 'logs' und/oder 'crashes'
+            $targets = $data['targets'];
+            $isDryRun = $data['dry_run'] ?? false;
 
             if ($mode !== 'custom') {
                 $mode = (int) $mode;
@@ -151,7 +158,6 @@ class McLogCleanAction extends Action
                             $filesToDelete = array_merge($filesToDelete, $filteredCrashes);
                         }
                     } catch (\Throwable $e) {
-
                     }
                 }
 
@@ -160,6 +166,17 @@ class McLogCleanAction extends Action
                         ->title('McLogCleaner')
                         ->body(trans('mclogcleaner::cleaner.button.no_logs_found'))
                         ->success()
+                        ->send();
+                    return;
+                }
+
+                if ($isDryRun) {
+                    Notification::make()
+                        ->title('McLogCleaner ' . trans('mclogcleaner::cleaner.button.dryrun_label'))
+                        ->body(trans('mclogcleaner::cleaner.button.dryrun_successful', [
+                            'count' => count($filesToDelete),
+                        ]))
+                        ->info()
                         ->send();
                     return;
                 }
