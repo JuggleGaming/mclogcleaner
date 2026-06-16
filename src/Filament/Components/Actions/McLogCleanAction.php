@@ -59,6 +59,16 @@ class McLogCleanAction extends Action
                     ->default(['logs'])
                     ->required(),
 
+                Select::make('action_type')
+                    ->label(fn () => trans('mclogcleaner::cleaner.button.action'))
+                    ->options(fn () => [
+                        'delete' => __('mclogcleaner::cleaner.button.action_delete'),
+                        'archive' => __('mclogcleaner::cleaner.button.action_archive'),
+                    ])
+                    ->default('delete')
+                    ->required()
+                    ->reactive(),
+
                 Select::make('mode')
                     ->label(fn () => trans('mclogcleaner::cleaner.button.delete_logs_label'))
                     ->options(fn () => [
@@ -93,6 +103,7 @@ class McLogCleanAction extends Action
 
             $mode = $data['mode'];
             $targets = $data['targets'];
+            $actionType = $data['action_type'] ?? 'delete';
             $isDryRun = $data['dry_run'] ?? false;
 
             if ($mode !== 'custom') {
@@ -107,7 +118,9 @@ class McLogCleanAction extends Action
             }
 
             $threshold = now()->subDays($days)->startOfDay();
-            $filesToDelete = [];
+
+            $logsToDelete = [];
+            $crashesToDelete = [];
 
             try {
                 if (in_array('logs', $targets, true)) {
@@ -119,7 +132,7 @@ class McLogCleanAction extends Action
                             ->throw()
                             ->json();
                         if (is_array($logFiles)) {
-                            $filteredLogs = collect($logFiles)
+                            $logsToDelete = collect($logFiles)
                                 ->filter(fn ($file) => str_ends_with($file['name'], '.log.gz'))
                                 ->filter(function ($file) use ($days, $threshold) {
                                     if ($days === 0) return true;
@@ -127,9 +140,7 @@ class McLogCleanAction extends Action
                                     return $logDate ? $logDate->lessThan($threshold) : false;
                                 })
                                 ->pluck('name')
-                                ->map(fn ($name) => 'logs/' . $name)
                                 ->all();
-                            $filesToDelete = array_merge($filesToDelete, $filteredLogs);
                         }
                     } catch (\Throwable $e) {
                     }
@@ -144,7 +155,7 @@ class McLogCleanAction extends Action
                             ->throw()
                             ->json();
                         if (is_array($crashFiles)) {
-                            $filteredCrashes = collect($crashFiles)
+                            $crashesToDelete = collect($crashFiles)
                                 ->filter(fn ($file) => str_starts_with($file['name'], 'crash-') && str_ends_with($file['name'], '.txt'))
                                 ->filter(function ($file) use ($days, $threshold) {
                                     if ($days === 0) return true;
@@ -152,16 +163,18 @@ class McLogCleanAction extends Action
                                     return $crashDate ? $crashDate->lessThan($threshold) : false;
                                 })
                                 ->pluck('name')
-                                ->map(fn ($name) => 'crash-reports/' . $name)
                                 ->all();
-
-                            $filesToDelete = array_merge($filesToDelete, $filteredCrashes);
                         }
                     } catch (\Throwable $e) {
                     }
                 }
 
-                if (empty($filesToDelete)) {
+                $allFilesWithPaths = array_merge(
+                    array_map(fn($name) => 'logs/' . $name, $logsToDelete),
+                    array_map(fn($name) => 'crash-reports/' . $name, $crashesToDelete)
+                );
+
+                if (empty($allFilesWithPaths)) {
                     Notification::make()
                         ->title('McLogCleaner')
                         ->body(trans('mclogcleaner::cleaner.button.no_logs_found'))
@@ -174,23 +187,53 @@ class McLogCleanAction extends Action
                     Notification::make()
                         ->title('McLogCleaner ' . trans('mclogcleaner::cleaner.button.dryrun_label'))
                         ->body(trans('mclogcleaner::cleaner.button.dryrun_successful', [
-                            'count' => count($filesToDelete),
-                        ]))
+                                'count' => count($allFilesWithPaths),
+                            ]))
                         ->info()
                         ->send();
                     return;
                 }
 
+                if ($actionType === 'archive') {
+                    $timestamp = now()->format('Y-m-d_H-i-s');
+
+                    if (!empty($logsToDelete)) {
+                        Http::daemon($server->node)
+                            ->post("/api/servers/{$server->uuid}/files/compress", [
+                                'root' => '/logs',
+                                'files' => $logsToDelete,
+                                'name' => "archive-logs-{$timestamp}" // Endung angepasst
+                            ])->throw();
+                    }
+
+                    if (!empty($crashesToDelete)) {
+                        Http::daemon($server->node)
+                            ->post("/api/servers/{$server->uuid}/files/compress", [
+                                'root' => '/crash-reports',
+                                'files' => $crashesToDelete,
+                                'name' => "archive-crashes-{$timestamp}" // Endung angepasst
+                            ])->throw();
+                    }
+                }
+
                 Http::daemon($server->node)
                     ->post("/api/servers/{$server->uuid}/files/delete", [
                         'root' => '/',
-                        'files' => $filesToDelete,
+                        'files' => $allFilesWithPaths,
                     ])
                     ->throw();
 
+                $successMessage = $actionType === 'archive'
+                    ? trans('mclogcleaner::cleaner.button.files_archived', [
+                        'count' => count($allFilesWithPaths),
+                    ])
+                    : trans('mclogcleaner::cleaner.button.files_deleted', [
+                        'count' => count($allFilesWithPaths),
+                    ]);
+
                 Notification::make()
                     ->title(trans('mclogcleaner::cleaner.button.cleanup_successful'))
-                    ->body(count($filesToDelete) . ' ' . trans('mclogcleaner::cleaner.button.files_deleted'))
+                    ->body($successMessage)
                     ->success()
                     ->send();
 
@@ -211,7 +254,6 @@ class McLogCleanAction extends Action
             $date = Carbon::createFromFormat('Y-m-d', $matches[1]);
             return $date ? $date->startOfDay() : null;
         }
-
         return null;
     }
 }
