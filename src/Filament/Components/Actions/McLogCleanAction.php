@@ -121,7 +121,7 @@ class McLogCleanAction extends Action
 
             $logsToDelete = [];
             $crashesToDelete = [];
-
+            $readErrors = [];
             try {
                 if (in_array('logs', $targets, true)) {
                     try {
@@ -143,6 +143,8 @@ class McLogCleanAction extends Action
                                 ->all();
                         }
                     } catch (\Throwable $e) {
+                        report($e);
+                        $readErrors[] = 'logs';
                     }
                 }
 
@@ -166,7 +168,13 @@ class McLogCleanAction extends Action
                                 ->all();
                         }
                     } catch (\Throwable $e) {
+                        report($e);
+                        $readErrors[] = 'crash-reports';
                     }
+                }
+
+                if (! empty($readErrors) && empty($logsToDelete) && empty($crashesToDelete)) {
+                    throw new \RuntimeException('Could not read selected directories: '.implode(', ', $readErrors));
                 }
 
                 $allFilesWithPaths = array_merge(

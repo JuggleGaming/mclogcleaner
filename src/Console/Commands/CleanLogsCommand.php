@@ -169,9 +169,9 @@ class CleanLogsCommand extends Command
     private function extractDate(string $filename): ?Carbon
     {
         if (preg_match('/(\d{4}-\d{2}-\d{2})/', $filename, $matches)) {
-            return Carbon::createFromFormat('Y-m-d', $matches[1])->startOfDay();
+            $date = Carbon::createFromFormat('Y-m-d', $matches[1]);
+            return $date ? $date->startOfDay() : null;
         }
-
         return null;
     }
 }
