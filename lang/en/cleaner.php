@@ -21,7 +21,7 @@ return [
         'files_archived' => ':count files were archived.',
         'dryrun_toggle' => 'Dry-run',
         'dryrun_label' => '(dry-run)',
-        'dryrun_info' => 'Show how many files would have been deleted, if this wasn`t a simulation.',
+        'dryrun_info' => 'Show how many files would have been deleted, if this wasn\'t a simulation.',
         'dryrun_successful' => 'Dr-yrun successful! :count files would have been affected.',
         'error_occured_label' => 'Cleanup failed!',
         'error_occured_description' => 'An error occurred while deleting log files. Please try again later.',
