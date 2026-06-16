@@ -8,7 +8,7 @@ McLogCleaner automatically deletes all `.log.gz` files and crash reports from th
 
 You install the latest version of McLogCleaner via the [Pelican Hub](https://hub.pelican.dev/plugins/mclogcleaner).
 
-If you want to install McLogCleaner manually, just click [here](https://github.com/JuggleGaming/mclogcleaner/releases/latest/download/mclogcleaner.zip) to download the latest version.
+If you want to install McLogCleaner manually, you can [download the latest release](https://github.com/JuggleGaming/mclogcleaner/releases/latest/download/mclogcleaner.zip) directly.
 
 To use this plugin, add `mclogcleaner` as a _feature_ to the egg you want to run it with.
 

@@ -22,6 +22,10 @@ class CleanLogsCommand extends Command
     {
         $serverUuid = $this->argument('server_uuid');
         $days = (int) $this->option('days');
+        if ($days < 0) {
+            $this->error('--days must be 0 or greater.');
+            return Command::FAILURE;
+        }
         $isDryRun = $this->option('dry-run');
 
         $cleanLogs = $this->option('logs');
@@ -32,7 +36,6 @@ class CleanLogsCommand extends Command
             $cleanCrashes = true;
         }
 
-        // Suche jetzt strikt nur noch nach der UUID
         $server = Server::where('uuid', $serverUuid)->first();
 
         if (! $server) {
