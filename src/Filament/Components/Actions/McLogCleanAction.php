@@ -7,8 +7,10 @@ use Carbon\Carbon;
 use Exception;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Support\Enums\Size;
 use Illuminate\Support\Facades\Http;
@@ -23,6 +25,7 @@ class McLogCleanAction extends Action
     protected function setUp(): void
     {
         parent::setUp();
+
         $this->hidden(function () {
             /** @var Server|null $server */
             $server = Filament::getTenant();
@@ -44,11 +47,30 @@ class McLogCleanAction extends Action
         $this->size(Size::ExtraLarge);
         $this->requiresConfirmation()
             ->modalHeading('McLogCleaner')
-            ->modalDescription(fn () =>trans('mclogcleaner::cleaner.button.delete_logs_description'))
-            ->modalSubmitActionLabel(fn () =>trans('mclogcleaner::cleaner.button.delete_logs_label'))
+            ->modalDescription(fn () => trans('mclogcleaner::cleaner.button.delete_logs_description'))
+            ->modalSubmitActionLabel(fn () => trans('mclogcleaner::cleaner.button.delete_logs_label'))
             ->form([
+                CheckboxList::make('targets')
+                    ->label(fn () => trans('mclogcleaner::cleaner.button.delete_choose_label'))
+                    ->options(fn () => [
+                        'logs' => __('mclogcleaner::cleaner.button.delete_choose_logs'),
+                        'crashes' => __('mclogcleaner::cleaner.button.delete_choose_crash'),
+                    ])
+                    ->default(['logs'])
+                    ->required(),
+
+                Select::make('action_type')
+                    ->label(fn () => trans('mclogcleaner::cleaner.button.action'))
+                    ->options(fn () => [
+                        'delete' => __('mclogcleaner::cleaner.button.action_delete'),
+                        'archive' => __('mclogcleaner::cleaner.button.action_archive'),
+                    ])
+                    ->default('delete')
+                    ->required()
+                    ->reactive(),
+
                 Select::make('mode')
-                    ->label(fn () =>trans('mclogcleaner::cleaner.button.delete_logs_label'))
+                    ->label(fn () => trans('mclogcleaner::cleaner.button.delete_logs_label'))
                     ->options(fn () => [
                         7 => __('mclogcleaner::cleaner.button.delete_older_than_7'),
                         30 => __('mclogcleaner::cleaner.button.delete_older_than_30'),
@@ -58,20 +80,32 @@ class McLogCleanAction extends Action
                     ->default(7)
                     ->required()
                     ->reactive(),
+
                 TextInput::make('custom_days')
-                    ->label(fn () =>trans('mclogcleaner::cleaner.button.delete_custom_label'))
+                    ->label(fn () => trans('mclogcleaner::cleaner.button.delete_custom_label'))
                     ->numeric()
                     ->minValue(1)
-                    ->maxValue(365)
+                    ->maxValue(1095)
                     ->placeholder('14')
                     ->required(fn ($get) => $get('mode') === 'custom')
                     ->visible(fn ($get) => $get('mode') === 'custom'),
+
+                Toggle::make('dry_run')
+                    ->label(fn () => trans('mclogcleaner::cleaner.button.dryrun_toggle'))
+                    ->helperText(fn () => trans('mclogcleaner::cleaner.button.dryrun_info'))
+                    ->default(false),
             ]);
 
         $this->action(function (array $data) {
             /** @var Server|null $server */
             $server = Filament::getTenant();
+            if (! $server) return;
+
             $mode = $data['mode'];
+            $targets = $data['targets'];
+            $actionType = $data['action_type'] ?? 'delete';
+            $isDryRun = $data['dry_run'] ?? false;
+
             if ($mode !== 'custom') {
                 $mode = (int) $mode;
             }
@@ -82,58 +116,139 @@ class McLogCleanAction extends Action
             } else {
                 $days = $mode;
             }
-            try {
-                $files = Http::daemon($server->node)
-                    ->get("/api/servers/{$server->uuid}/files/list-directory", [
-                        'directory' => 'logs',
-                    ])
-                    ->throw()
-                    ->json();
-                if (! is_array($files)) {
-                    throw new Exception('Invalid log directory response.');
-                }
-                $threshold = now()->subDays($days)->startOfDay();
-                $logsToDelete = collect($files)
-                    ->filter(fn ($file) => str_ends_with($file['name'], '.log.gz'))
-                    ->filter(function ($file) use ($days, $threshold) {
-                        if ($days === 0) {
-                            return true;
-                        }
-                        $logDate = $this->extractLogDate($file['name']);
-                        if (! $logDate) {
-                            return false;
-                        }
 
-                        return $logDate->lessThan($threshold);
-                    })
-                    ->pluck('name')
-                    ->map(fn ($name) => 'logs/'.$name)
-                    ->values()
-                    ->all();
-                if (empty($logsToDelete)) {
+            $threshold = now()->subDays($days)->startOfDay();
+
+            $logsToDelete = [];
+            $crashesToDelete = [];
+            $readErrors = [];
+            try {
+                if (in_array('logs', $targets, true)) {
+                    try {
+                        $logFiles = Http::daemon($server->node)
+                            ->get("/api/servers/{$server->uuid}/files/list-directory", [
+                                'directory' => 'logs',
+                            ])
+                            ->throw()
+                            ->json();
+                        if (is_array($logFiles)) {
+                            $logsToDelete = collect($logFiles)
+                                ->filter(fn ($file) => str_ends_with($file['name'], '.log.gz'))
+                                ->filter(function ($file) use ($days, $threshold) {
+                                    if ($days === 0) return true;
+                                    $logDate = $this->extractLogDate($file['name']);
+                                    return $logDate ? $logDate->lessThan($threshold) : false;
+                                })
+                                ->pluck('name')
+                                ->all();
+                        }
+                    } catch (\Throwable $e) {
+                        report($e);
+                        $readErrors[] = 'logs';
+                    }
+                }
+
+                if (in_array('crashes', $targets, true)) {
+                    try {
+                        $crashFiles = Http::daemon($server->node)
+                            ->get("/api/servers/{$server->uuid}/files/list-directory", [
+                                'directory' => 'crash-reports',
+                            ])
+                            ->throw()
+                            ->json();
+                        if (is_array($crashFiles)) {
+                            $crashesToDelete = collect($crashFiles)
+                                ->filter(fn ($file) => str_starts_with($file['name'], 'crash-') && str_ends_with($file['name'], '.txt'))
+                                ->filter(function ($file) use ($days, $threshold) {
+                                    if ($days === 0) return true;
+                                    $crashDate = $this->extractLogDate($file['name']);
+                                    return $crashDate ? $crashDate->lessThan($threshold) : false;
+                                })
+                                ->pluck('name')
+                                ->all();
+                        }
+                    } catch (\Throwable $e) {
+                        report($e);
+                        $readErrors[] = 'crash-reports';
+                    }
+                }
+
+                if (! empty($readErrors) && empty($logsToDelete) && empty($crashesToDelete)) {
+                    throw new \RuntimeException('Could not read selected directories: '.implode(', ', $readErrors));
+                }
+
+                $allFilesWithPaths = array_merge(
+                    array_map(fn($name) => 'logs/' . $name, $logsToDelete),
+                    array_map(fn($name) => 'crash-reports/' . $name, $crashesToDelete)
+                );
+
+                if (empty($allFilesWithPaths)) {
                     Notification::make()
                         ->title('McLogCleaner')
-                        ->body(trans('mclogcleaner::cleaner.button.no_logs_found'),)
+                        ->body(trans('mclogcleaner::cleaner.button.no_logs_found'))
                         ->success()
                         ->send();
-
                     return;
                 }
+
+                if ($isDryRun) {
+                    Notification::make()
+                        ->title('McLogCleaner ' . trans('mclogcleaner::cleaner.button.dryrun_label'))
+                        ->body(trans('mclogcleaner::cleaner.button.dryrun_successful', [
+                                'count' => count($allFilesWithPaths),
+                            ]))
+                        ->info()
+                        ->send();
+                    return;
+                }
+
+                if ($actionType === 'archive') {
+                    $timestamp = now()->format('Y-m-d_H-i-s');
+
+                    if (!empty($logsToDelete)) {
+                        Http::daemon($server->node)
+                            ->post("/api/servers/{$server->uuid}/files/compress", [
+                                'root' => '/logs',
+                                'files' => $logsToDelete,
+                                'name' => "archive-logs-{$timestamp}" // Endung angepasst
+                            ])->throw();
+                    }
+
+                    if (!empty($crashesToDelete)) {
+                        Http::daemon($server->node)
+                            ->post("/api/servers/{$server->uuid}/files/compress", [
+                                'root' => '/crash-reports',
+                                'files' => $crashesToDelete,
+                                'name' => "archive-crashes-{$timestamp}" // Endung angepasst
+                            ])->throw();
+                    }
+                }
+
                 Http::daemon($server->node)
                     ->post("/api/servers/{$server->uuid}/files/delete", [
                         'root' => '/',
-                        'files' => $logsToDelete,
+                        'files' => $allFilesWithPaths,
                     ])
                     ->throw();
+
+                $successMessage = $actionType === 'archive'
+                    ? trans('mclogcleaner::cleaner.button.files_archived', [
+                        'count' => count($allFilesWithPaths),
+                    ])
+                    : trans('mclogcleaner::cleaner.button.files_deleted', [
+                        'count' => count($allFilesWithPaths),
+                    ]);
+
                 Notification::make()
                     ->title(trans('mclogcleaner::cleaner.button.cleanup_successful'))
-                    ->body(count($logsToDelete).' '.trans('mclogcleaner::cleaner.button.files_deleted'))
+                    ->body($successMessage)
                     ->success()
                     ->send();
+
             } catch (\Throwable $e) {
                 report($e);
                 Notification::make()
-                    ->title(trans('mclogcleaner::cleaner.button.error_occured_label'),)
+                    ->title(trans('mclogcleaner::cleaner.button.error_occured_label'))
                     ->body(trans('mclogcleaner::cleaner.button.error_occured_description'))
                     ->danger()
                     ->send();
@@ -145,10 +260,8 @@ class McLogCleanAction extends Action
     {
         if (preg_match('/(\d{4}-\d{2}-\d{2})/', $filename, $matches)) {
             $date = Carbon::createFromFormat('Y-m-d', $matches[1]);
-
             return $date ? $date->startOfDay() : null;
         }
-
         return null;
     }
 }

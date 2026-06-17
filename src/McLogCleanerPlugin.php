@@ -8,6 +8,7 @@ use Filament\Contracts\Plugin;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Panel;
+use Illuminate\Support\ServiceProvider;
 
 class McLogCleanerPlugin implements HasPluginSettings, Plugin
 {

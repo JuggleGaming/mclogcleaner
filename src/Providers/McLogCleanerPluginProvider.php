@@ -7,6 +7,7 @@ use App\Filament\Server\Pages\Console;
 use App\Filament\Server\Resources\Files\Pages\ListFiles;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use JuggleGaming\McLogCleaner\Console\Commands\CleanLogsCommand;
 use JuggleGaming\McLogCleaner\Filament\Components\Actions\McLogCleanAction;
 
 class McLogCleanerPluginProvider extends ServiceProvider
@@ -18,10 +19,15 @@ class McLogCleanerPluginProvider extends ServiceProvider
             HeaderActionPosition::Before,
             McLogCleanAction::make()
                 ->visible(function ($livewire) {
-                    if (isset($livewire->path)) {
-                        return $livewire->path === 'logs' || Str::startsWith($livewire->path, 'logs/');
+                    if (! isset($livewire->path)) {
+                        return false;
                     }
-                    return false;
+                    return collect([
+                        'logs',
+                        'crash-reports',
+                    ])->contains(
+                        fn ($dir) => $livewire->path === $dir || Str::startsWith($livewire->path, "{$dir}/")
+                    );
                 })
         );
 
@@ -29,6 +35,10 @@ class McLogCleanerPluginProvider extends ServiceProvider
 
     public function boot(): void
     {
-        //
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                CleanLogsCommand::class,
+            ]);
+        }
     }
 }
