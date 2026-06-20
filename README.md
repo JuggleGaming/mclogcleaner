@@ -1,6 +1,6 @@
 <img src=".github/pictures/banner.png">
 
-McLogCleaner automatically deletes all `.log.gz` files and crash reports from the server’s `logs` folder.
+McLogCleaner deletes all `.log.gz` files and crash reports from the server’s `logs` and `crash-reports` folder.
 
 > **Note:** `latest.log` will always remain intact and is never deleted.
 
