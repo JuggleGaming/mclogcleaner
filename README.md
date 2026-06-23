@@ -1,6 +1,6 @@
 <img src=".github/pictures/banner.png">
 
-![GitHub Release](https://img.shields.io/github/v/release/jugglegaming/mclogcleaner?style=flat-square&color=00CCF2&link=https%3A%2F%2Fhub.pelican.dev%2Fplugins%2Fmclogcleaner)
+[![GitHub Release](https://img.shields.io/github/v/release/jugglegaming/mclogcleaner?style=flat-square&color=00CCF2)](https://hub.pelican.dev/plugins/mclogcleaner)
 
 
 McLogCleaner deletes all `.log.gz` files and crash reports from the server’s `logs` and `crash-reports` folder.
