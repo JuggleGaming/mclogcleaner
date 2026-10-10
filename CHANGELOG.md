@@ -1,1 +1,1 @@
-Made the plugin beta36 compatible. This change may result in a later unsupported backwards compatibility. Unless announced everything should work just fine.
+Update to 1.5.0 to add the api_version (1) for the RC1-release.
